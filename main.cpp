@@ -1,11 +1,14 @@
 #include <QApplication>
-#include <QPushButton>
-#include <QObject>
 #include <QVBoxLayout>
 #include <QScrollArea>
 #include <QTextEdit>
 #include <memory>
 #include <Qstring>
+#include <format>
+
+/*Не используется в готовой версии*/
+#include <QPushButton>
+#include <QObject>
 
 int main(int argc, char *argv[])
 {
@@ -17,54 +20,65 @@ int main(int argc, char *argv[])
     window.setWindowTitle("Logger");
     window.setStyleSheet("QWidget { background-color: #1a1a1a; min-width: 450px; min-height: 300px; }");
 
-    class QLogSpace : public QTextEdit {
+    /*класс для поля выввода логов*/
+    class QLoggerSpace : public QTextEdit {
     public:
-        void appendText(const QString& add_data) {
-            QTextEdit::append(add_data);
-            QTextEdit::moveCursor(QTextCursor::End);
+        QLoggerSpace() {
+            setPlainText("Виузальная оболочка для отслеживания логов\n");
+            setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+            setAlignment(Qt::AlignBottom);
+            setReadOnly(true);
+
+            setStyleSheet(
+                "QTextEdit {"
+                "    color: white;"
+                "    font-size: 28px;"
+                "}"
+            );
+        }
+
+        /*метод добавления строки*/
+        /*параметры флагов 0  - простой вывод 1  - предупреждение -1 - ошибка*/
+        void appendText(const QString& add_data, int flag) {
+            auto fit_string = std::make_shared<std::string>("white");
+
+            switch (flag) {
+                case 1:
+                    *fit_string.get() = "yellow";
+                    break;
+                case -1:
+                    *fit_string.get() = "red";
+                    break;
+            }
+
+            append(QString::fromStdString(std::format("<font color=\"{}\">{}</font>", *fit_string.get(), add_data.toStdString())));
+            moveCursor(QTextCursor::End);
         }
     };
 
-    auto log_space = std::make_shared<QLogSpace>();
-    log_space->setPlainText("Виузальная оболочка для отслеживания логов\n");
-    log_space->setReadOnly(true);
-    log_space->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    log_space->setAlignment(Qt::AlignBottom);
-    log_space->setStyleSheet(
-        "QLogSpace {"
-        "    background-color: rgb(255, 255, 255);"
-        "    color: black;"
-        "    text-align: bottom;"
-        "    font-size: 22px;"
-        /*"   font-family: \"Fira Code\", monospace;"
-        "   font-optical-sizing: auto;"
-        "   font-weight: 500;"
-        "   font-style: normal;"*/
-        "}"
-    );
+    /*Объект по поля логов*/
+    auto log_space = std::make_shared<QLoggerSpace>();
 
     auto scrollArea = std::make_shared<QScrollArea>();
     scrollArea->setWidget(log_space.get());
     scrollArea->setWidgetResizable(true);
     scrollArea->setStyleSheet("QScrollArea { border: none; }");
 
-    QPushButton *test = new QPushButton("Press", &window);
 
 
+    /*разметка для окна*/
     auto virtual_box = std::make_shared<QVBoxLayout>();
+
     virtual_box->addWidget(scrollArea.get());
-    virtual_box->addWidget(test);
     virtual_box->setContentsMargins(10, 5, 10, 0);
+
+
+    /*Для теста отображения ошибок*/
+    //QPushButton *test = new QPushButton("Press", &window);
+    //QObject::connect(test, &QPushButton::clicked, [log_space]() { log_space->appendText("moew", 1);});
+    //virtual_box->addWidget(test);
+
     window.setLayout(virtual_box.get());
-
-
-    QObject::connect(test, &QPushButton::clicked, [log_space]() {
-        log_space->appendText("meow");
-    });
-
-
-
-
     window.show();
     return app.exec();
 }
