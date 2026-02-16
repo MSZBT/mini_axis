@@ -1,3 +1,7 @@
+//#include "axis/apps/qt_app.h" //вывод функционала наружу
+//
+//#include "axis/core" //подключение core чтобы использовать логгер
+
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QScrollArea>
@@ -5,59 +9,119 @@
 #include <memory>
 #include <Qstring>
 #include <format>
+#include <string>
 
-/*Не используется в готовой версии*/
-#include <QPushButton>
-#include <QObject>
+#include <iostream>
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/rotating_file_sink.h"
+#include "spdlog/sinks/daily_file_sink.h"
+#include "spdlog/async.h"
+/*МЕНЯТЬ ПУТИ НА ОТНОСИТЕЛЬНЫЕ*/
+
+void qtLogSent(const std::string& log_message, int level);
+
+
+class AppSink : public spdlog::sinks::base_sink<std::mutex> {
+protected:
+    void sink_it_(const spdlog::details::log_msg& log_message) override {
+        spdlog::level::level_enum level = log_message.level;
+        spdlog::memory_buf_t formatted;
+        formatter_->format(log_message, formatted);
+
+        qtLogSent(fmt::to_string(formatted), level);
+    }
+
+    void flush_() override {}
+};
+
+
+/*класс для поля выввода логов*/
+class QLoggerSpace : public QTextEdit {
+private:
+    std::shared_ptr<Logger> logger;
+public:
+    QLoggerSpace() {
+        setPlainText("Отслеживание логов\n");
+        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setAlignment(Qt::AlignBottom);
+        setReadOnly(true);
+
+        setStyleSheet(
+            "QTextEdit {"
+            "    font-size: 24px;"
+            "}"
+        );
+
+        logger = Logger::getSpdlogLogger();
+    }
+
+    bool openSink() {
+        try {
+            if ((logger != nullptr) && (this != nullptr)) {
+                auto appSink = std::make_shared<AppSink>();
+                auto logger = Logger::getSpdlogLogger();
+            }
+        } catch (const std::exception& e) {
+            return 1;
+        }
+    }
+
+    void outLogs(const QString& add_data, std::string color) {
+        append(QString::fromStdString(std::format("<font color=\"{}\">{}</font>", color, add_data.toStdString())));
+        moveCursor(QTextCursor::End);
+    }
+};
+
+/*Объект поля логов*/
+std::shared_ptr<QLoggerSpace> log_space;
+
+
+
+void qtLogSent(const std::string& log_message, int level) {
+    std::string color = "white";
+    switch (level) {
+        case spdlog::level::trace: {
+            color = "gray";
+            break;
+        }
+        case spdlog::level::debug: {
+            color = "white";
+            break;
+        }
+        case spdlog::level::info: {
+            color = "green";
+            break;
+        }
+        case spdlog::level::warn: {
+            color = "yellow";
+            break;
+        }
+        case spdlog::level::err: {
+            color = "red";
+            break;
+        }
+        case spdlog::level::critical: {
+            color = "red";
+            break;
+        }
+        case spdlog::level::off:
+            break;
+    }
+    log_space->outLogs(QString::fromStdString(log_message), color);
+}
+
 
 int main(int argc, char *argv[])
 {
-    /*инициализация приложения*/
     QApplication app(argc, argv);
 
-    /*рабочее окнго*/
+
     QWidget window;
     window.setWindowTitle("Logger");
     window.setStyleSheet("QWidget { background-color: #1a1a1a; min-width: 450px; min-height: 300px; }");
 
-    /*класс для поля выввода логов*/
-    class QLoggerSpace : public QTextEdit {
-    public:
-        QLoggerSpace() {
-            setPlainText("Виузальная оболочка для отслеживания логов\n");
-            setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-            setAlignment(Qt::AlignBottom);
-            setReadOnly(true);
-
-            setStyleSheet(
-                "QTextEdit {"
-                "    color: white;"
-                "    font-size: 28px;"
-                "}"
-            );
-        }
-
-        /*метод добавления строки*/
-        /*параметры флагов 0  - простой вывод 1  - предупреждение -1 - ошибка*/
-        void appendText(const QString& add_data, int flag) {
-            auto fit_string = std::make_shared<std::string>("white");
-
-            switch (flag) {
-                case 1:
-                    *fit_string.get() = "yellow";
-                    break;
-                case -1:
-                    *fit_string.get() = "red";
-                    break;
-            }
-
-            append(QString::fromStdString(std::format("<font color=\"{}\">{}</font>", *fit_string.get(), add_data.toStdString())));
-            moveCursor(QTextCursor::End);
-        }
-    };
-
-    /*Объект по поля логов*/
-    auto log_space = std::make_shared<QLoggerSpace>();
+    log_space = std::make_shared<QLoggerSpace>();
 
     auto scrollArea = std::make_shared<QScrollArea>();
     scrollArea->setWidget(log_space.get());
@@ -65,20 +129,15 @@ int main(int argc, char *argv[])
     scrollArea->setStyleSheet("QScrollArea { border: none; }");
 
 
-
-    /*разметка для окна*/
     auto virtual_box = std::make_shared<QVBoxLayout>();
-
     virtual_box->addWidget(scrollArea.get());
     virtual_box->setContentsMargins(10, 5, 10, 0);
 
 
-    /*Для теста отображения ошибок*/
-    //QPushButton *test = new QPushButton("Press", &window);
-    //QObject::connect(test, &QPushButton::clicked, [log_space]() { log_space->appendText("moew", 1);});
-    //virtual_box->addWidget(test);
-
     window.setLayout(virtual_box.get());
     window.show();
+
+    log_space->openSink();
+
     return app.exec();
 }
