@@ -10,7 +10,6 @@
 #include <memory>
 #include <QString>
 #include <QPushButton>
-#include <format>
 #include <string>
 
 #include <iostream>
@@ -26,7 +25,6 @@
 void qtLogSent(const std::string& log_message, int level);
 
 /*РЕАЛИЗАЦИЯ ЛОГГЕРА ДЛЯ ТЕСТИРОВАНИЯ*/
-
 class Logger {
 private:
     std::shared_ptr<spdlog::logger> m_logger;
@@ -79,7 +77,6 @@ protected:
 /*класс для поля выввода логов*/
 class QLoggerSpace : public QTextEdit {
 private:
-    //std::shared_ptr<Logger> logger;
     std::shared_ptr<AppSink> personalSink;
 
 public:
@@ -94,9 +91,6 @@ public:
             "    font-size: 24px;"
             "}"
         );
-
-        //logger = Logger::getSpdlogLogger();
-
     }
 
     void openSink() {
@@ -109,6 +103,7 @@ public:
             std::cout << "Error with sink opening" << std::endl;
             return;
         }
+        std::cout << "Sink opened" << std::endl;
     }
 
     std::shared_ptr<AppSink> getSink() {
@@ -116,7 +111,7 @@ public:
     }
 
     void outLogs(const QString& add_data, std::string color) {
-        append(QString::fromStdString(std::format("<font color=\"{}\">{}</font>", color, add_data.toStdString())));
+        append(QString("<font color=\"%1\">%2</font>").arg(color).arg(add_data));
         moveCursor(QTextCursor::End);
     }
 };
@@ -182,13 +177,16 @@ int main(int argc, char *argv[])
 
     QPushButton *test = new QPushButton("Press", &window);
 
-    //QObject::connect(test, &QPushButton::clicked, [log_space]() { log_space->appendText("moew", 1);}); - отправить сообещение через логгер
     virtual_box->addWidget(test);
 
     window.setLayout(virtual_box.get());
     window.show();
 
     log_space->openSink();
+
+    //logger->registerSink(log_space->getSink());
+
+    QObject::connect(test, &QPushButton::clicked, []() { logger->error("PIZDEC BLYAD"); });
 
     /*ТЕСТИРОВАНИЕ В ВИДЕ НАПИСАНИЯ СОБСВЕННОГО ЛОГГЕРА ЛОКАЛЬНО*/
     return app.exec();
