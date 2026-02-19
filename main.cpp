@@ -1,34 +1,22 @@
 //#include "axis/apps/qt_app.h" //вывод функционала наружу
 //
-//#include "axis/core" //подключение core чтобы использовать логгер
+//#include "axis/core" //подключение core чтобы использовать логгер/синглтон
+
+#include "qt_sink.h"
 
 
-#include <QApplication>
-#include <QVBoxLayout>
-#include <QScrollArea>
-#include <QTextEdit>
-#include <memory>
-#include <QString>
-#include <QPushButton>
-#include <string>
+class Logger;
+class QLoggerSpace;
+class AppSink;
 
-#include <iostream>
-#include "spdlog/sinks/stdout_color_sinks.h"
-#include "spdlog/sinks/base_sink.h"
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/rotating_file_sink.h"
-#include "spdlog/sinks/daily_file_sink.h"
-#include "spdlog/async.h"
-#include "spdlog/logger.h"
-/*МЕНЯТЬ ПУТИ НА ОТНОСИТЕЛЬНЫЕ*/
+extern std::shared_ptr<Logger> logger;
+extern QLoggerSpace* log_space;
+extern QList<QLoggerSpace*> logs_objects;
 
-void qtLogSent(const std::string& log_message, int level);
 
-/*РЕАЛИЗАЦИЯ ЛОГГЕРА ДЛЯ ТЕСТИРОВАНИЯ*/
 class Logger {
 private:
     std::shared_ptr<spdlog::logger> m_logger;
-
 public:
     Logger() {
         std::vector<spdlog::sink_ptr> sinks;
@@ -57,28 +45,11 @@ public:
     void error(const std::string& msg) { m_logger->error(msg); }
 };
 
-
 auto logger = std::make_shared<Logger>();
 
-class AppSink : public spdlog::sinks::base_sink<std::mutex> {
-protected:
-    void sink_it_(const spdlog::details::log_msg& log_message) override {
-        spdlog::level::level_enum level = log_message.level;
-        spdlog::memory_buf_t formatted;
-        formatter_->format(log_message, formatted);
-
-        qtLogSent(fmt::to_string(formatted), level);
-    }
-
-    void flush_() override {}
-};
 
 
-/*класс для поля выввода логов*/
 class QLoggerSpace : public QTextEdit {
-private:
-    std::shared_ptr<AppSink> personalSink;
-
 public:
     QLoggerSpace() {
         setPlainText("Отслеживание логов\n");
@@ -93,63 +64,44 @@ public:
         );
     }
 
-    void openSink() {
-        try {
-            if (logger != nullptr) {
-                personalSink = std::make_shared<AppSink>();
-                logger->registerSink(personalSink);
-            }
-        } catch (const std::exception& e) {
-            std::cout << "Error with sink opening" << std::endl;
-            return;
-        }
-        std::cout << "Sink opened" << std::endl;
-    }
+    void outLogs(const std::string& log_message, spdlog::level::level_enum level) {
+        static std::map<spdlog::level::level_enum, std::string> colorMap = {
+            {spdlog::level::trace, "gray"},
+            {spdlog::level::debug, "white"},
+            {spdlog::level::info, "green"},
+            {spdlog::level::warn, "yellow"},
+            {spdlog::level::err, "red"},
+            {spdlog::level::critical, "red"}
+        };
 
-    std::shared_ptr<AppSink> getSink() {
-        return personalSink;
-    }
+        auto tmp = colorMap.find(level);
+        std::string color = (tmp != colorMap.end()) ? tmp->second : "white";
 
-    void outLogs(const QString& add_data, std::string color) {
-        append(QString("<font color=\"%1\">%2</font>").arg(color).arg(add_data));
+        append(QString("<font color=\"%1\">%2</font>").arg(color).arg(log_message));
         moveCursor(QTextCursor::End);
     }
 };
 
-/*Объект поля логов*/
-std::shared_ptr<QLoggerSpace> log_space;
+QList<QLoggerSpace*> logs_objects;
 
-void qtLogSent(const std::string& log_message, int level) {
-    std::string color = "white";
-    switch (level) {
-        case spdlog::level::trace: {
-            color = "gray";
-            break;
+/*Объект поля логов*/
+QLoggerSpace* log_space;
+QLoggerSpace* log_space2;
+
+
+
+
+/*РЕАЛИЗАЦИЯ СИНКА*/
+void AppSink::sink_it_(const spdlog::details::log_msg& log_message) {
+    spdlog::level::level_enum level = log_message.level;
+    spdlog::memory_buf_t formatted;
+    formatter_->format(log_message, formatted);
+
+    for (const auto& log_space_tmp : logs_objects) {
+        if (log_space_tmp) {
+            log_space_tmp->outLogs(fmt::to_string(formatted), level);
         }
-        case spdlog::level::debug: {
-            color = "white";
-            break;
-        }
-        case spdlog::level::info: {
-            color = "green";
-            break;
-        }
-        case spdlog::level::warn: {
-            color = "yellow";
-            break;
-        }
-        case spdlog::level::err: {
-            color = "red";
-            break;
-        }
-        case spdlog::level::critical: {
-            color = "red";
-            break;
-        }
-        case spdlog::level::off:
-            break;
     }
-    log_space->outLogs(QString::fromStdString(log_message), color);
 }
 
 
@@ -163,32 +115,42 @@ int main(int argc, char *argv[])
     window.setWindowTitle("Logger");
     window.setStyleSheet("QWidget { background-color: #1a1a1a; min-width: 450px; min-height: 300px; }");
 
-    log_space = std::make_shared<QLoggerSpace>();
 
-    auto scrollArea = std::make_shared<QScrollArea>();
-    scrollArea->setWidget(log_space.get());
+    log_space = new QLoggerSpace();
+    log_space2 = new QLoggerSpace();
+
+    auto scrollArea = new QScrollArea();
+    scrollArea->setWidget(log_space);
     scrollArea->setWidgetResizable(true);
     scrollArea->setStyleSheet("QScrollArea { border: none; }");
 
+    auto scrollArea2 = new QScrollArea();
+    scrollArea2->setWidget(log_space2);
+    scrollArea2->setWidgetResizable(true);
+    scrollArea2->setStyleSheet("QScrollArea { border: none; }");
 
-    auto virtual_box = std::make_shared<QVBoxLayout>();
-    virtual_box->addWidget(scrollArea.get());
+    logs_objects.push_back(log_space);
+    logs_objects.push_back(log_space2);
+
+    auto virtual_box = new QVBoxLayout();
+    virtual_box->addWidget(scrollArea);
+    virtual_box->addWidget(scrollArea2);
     virtual_box->setContentsMargins(10, 5, 10, 0);
+
 
     QPushButton *test = new QPushButton("Press", &window);
 
+
     virtual_box->addWidget(test);
 
-    window.setLayout(virtual_box.get());
+    window.setLayout(virtual_box);
     window.show();
 
-    log_space->openSink();
+    auto sink_qt = std::make_shared<AppSink>();
+    logger->registerSink(sink_qt);
 
-    //logger->registerSink(log_space->getSink());
+    QObject::connect(test, &QPushButton::clicked, []() { logger->warn("Meow"); });
 
-    QObject::connect(test, &QPushButton::clicked, []() { logger->error("PIZDEC BLYAD"); });
-
-    /*ТЕСТИРОВАНИЕ В ВИДЕ НАПИСАНИЯ СОБСВЕННОГО ЛОГГЕРА ЛОКАЛЬНО*/
     return app.exec();
 }
 
