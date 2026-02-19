@@ -1,5 +1,3 @@
-//#include "axis/apps/qt_app.h" //вывод функционала наружу
-//
 //#include "axis/core" //подключение core чтобы использовать логгер/синглтон
 
 #include "qt_sink.h"
@@ -12,6 +10,7 @@ class AppSink;
 extern std::shared_ptr<Logger> logger;
 extern QLoggerSpace* log_space;
 extern QList<QLoggerSpace*> logs_objects;
+
 
 
 class Logger {
@@ -28,10 +27,6 @@ public:
         spdlog::register_logger(m_logger);
         m_logger->set_level(spdlog::level::info);
         m_logger->info("Logger initialized");
-    }
-
-    std::shared_ptr<spdlog::logger> getSpdlogLogger() {
-        return m_logger;
     }
 
     void registerSink(std::shared_ptr<spdlog::sinks::sink> sink) {
@@ -149,7 +144,11 @@ int main(int argc, char *argv[])
     auto sink_qt = std::make_shared<AppSink>();
     logger->registerSink(sink_qt);
 
-    QObject::connect(test, &QPushButton::clicked, []() { logger->warn("Meow"); });
+    QObject::connect(test, &QPushButton::clicked, []() {
+        logger->warn("Warning Meow");
+        logger->info("Common Meow");
+        logger->error("Dangerous Meow");
+    });
 
     return app.exec();
 }
