@@ -26,6 +26,8 @@ int main(int argc, char *argv[])
     auto logger = std::make_shared<LocalLogger>();
 
     std::shared_ptr<QtAppSink> sink_qt = std::make_shared<QtAppSink>(logs_manager);
+    sink_qt->register_ui();
+
     logger->registerSink(sink_qt);
 
     QWidget window;

@@ -1,8 +1,10 @@
 set(TARGET_NAME AXIS_TEST)
 
 cmake_minimum_required(VERSION 3.16)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
 
 project(${TARGET_NAME})
 
@@ -29,9 +31,8 @@ set(QT_APP_SOURCES
 
 add_executable(${TARGET_NAME}
         qt_app.cpp
-        src/local_logger.cpp
-        src/qt_loggerspace.cpp
-        src/qt_sink.cpp
+        ${QT_APP_SOURCES}
+        ${QT_APP_HEADERS}
 )
 
 target_include_directories(${TARGET_NAME} PRIVATE include)
