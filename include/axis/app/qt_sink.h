@@ -20,6 +20,7 @@ class QtAppSink : public QObject,
     Q_OBJECT
 private:
     QList<QLoggerSpace*> ui_manager;
+    QString log_buffer[2048];
 public:
     explicit QtAppSink(QList<QLoggerSpace*> ui_manager);
     void register_ui();
@@ -30,3 +31,6 @@ signals:
     void generate_signal(const QString& log_message, spdlog::level::level_enum level);
 };
 #endif
+
+
+

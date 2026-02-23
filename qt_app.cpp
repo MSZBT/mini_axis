@@ -4,7 +4,6 @@
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QPushButton>
-#include <QScrollArea>
 
 #include <memory>
 
@@ -54,6 +53,9 @@ int main(int argc, char *argv[])
     QObject::connect(test, &QPushButton::clicked, [logger]() {
         logger->warn("Warning Meow");
     });
+
+
+
 
     return app.exec();
 }
