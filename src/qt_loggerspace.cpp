@@ -3,6 +3,9 @@
 
 #include <QWidget>
 #include <QTimer>
+#include <QTextCursor>
+
+
 
 QLoggerSpace::QLoggerSpace() {
     setPlainText("Отслеживание логов\n");
@@ -17,10 +20,6 @@ QLoggerSpace::QLoggerSpace() {
         "}"
     );
 
-    /*буфер для логов*/
-    log_buffer.reserve(2048);
-
-    /*Таймер по выводу логов*/
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &QLoggerSpace::show_logs);
     timer->start(1000);
@@ -33,13 +32,32 @@ void QLoggerSpace::register_sink(std::shared_ptr<QtAppSink> qt_sink) {
 }
 
 void QLoggerSpace::show_logs() {
-    for (const auto& msg : log_buffer) {
-        if (!msg.isEmpty()) {
-            this->append(msg);
+    if (!log_buffer.isEmpty()) {
+        this->append(log_buffer);
+
+        QTextDocument *doc = document();
+        QTextCursor cursor(doc);
+
+        int blockCount = doc->blockCount();
+
+        if (blockCount > STRING_LIMITOR) {
+            cursor.movePosition(QTextCursor::Start);
+
+            for(int i = 0; i < blockCount - STRING_LIMITOR; ++i) {
+                cursor.movePosition(QTextCursor::NextBlock);
+                cursor.movePosition(QTextCursor::StartOfBlock);
+            }
+
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.setPosition(0, QTextCursor::KeepAnchor);
+            cursor.removeSelectedText();
+            cursor.deleteChar();
         }
+
+        log_buffer.clear();
     }
-    this->log_buffer.clear();
 }
+
 
 void QLoggerSpace::fill_buffer(const QString& log_message, spdlog::level::level_enum level) {
     static std::map<spdlog::level::level_enum, std::string> colorMap = {
@@ -54,7 +72,5 @@ void QLoggerSpace::fill_buffer(const QString& log_message, spdlog::level::level_
     auto tmp = colorMap.find(level);
     std::string color = (tmp != colorMap.end()) ? tmp->second : "white";
 
-    //append(QString("<font color=\"%1\">%2</font>").arg(color).arg(log_message));
-    this->log_buffer.append(QString("<font color=\"%1\">%2</font>").arg(color).arg(log_message));
-    //moveCursor(QTextCursor::End);
+    this->log_buffer.append(QString("<font color=\"%1\">%2</font><br>").arg(color, log_message.trimmed()));
 }

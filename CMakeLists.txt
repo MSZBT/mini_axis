@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 
 project(${TARGET_NAME})
 
-set(Qt6_DIR "/Qt/6.9.3/msvc2022/lib/cmake/Qt6")
+set(Qt6_DIR "Qt/6.9.3/msvc2022/lib/cmake/Qt6")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(spdlog REQUIRED)

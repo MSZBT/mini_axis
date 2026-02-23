@@ -7,8 +7,6 @@
 
 #include <memory>
 
-#include "axis/app/qt_sink.h"
-#include "include/axis/app/qt_loggerspace.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,11 +14,9 @@ int main(int argc, char *argv[])
 
 
     QLoggerSpace* log_space = new QLoggerSpace();
-    QLoggerSpace* log_space2 = new QLoggerSpace();
 
     QList<QLoggerSpace*> logs_manager;
     logs_manager.push_back(log_space);
-    logs_manager.push_back(log_space2);
 
     auto logger = std::make_shared<LocalLogger>();
 
@@ -36,7 +32,6 @@ int main(int argc, char *argv[])
 
     auto virtual_box = new QVBoxLayout();
     virtual_box->addWidget(log_space);
-    virtual_box->addWidget(log_space2);
     virtual_box->setContentsMargins(10, 5, 10, 0);
 
 
