@@ -30,6 +30,9 @@ QLoggerSpace::QLoggerSpace(std::shared_ptr<QtAppSink> qt_sink) : sink_qt(qt_sink
 
 void QLoggerSpace::show_logs() {
     if (!log_buffer.isEmpty()) {
+        if (log_buffer.size() >= 2) {
+            log_buffer[log_buffer.size() - 2] = '\0';
+        }
         this->append(log_buffer);
 
         QTextDocument *doc = document();
