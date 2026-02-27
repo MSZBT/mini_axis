@@ -18,11 +18,6 @@ class QtAppSink : public QObject,
                   public spdlog::sinks::base_sink<std::mutex>,
                   public std::enable_shared_from_this<QtAppSink> {
     Q_OBJECT
-private:
-    QList<QLoggerSpace*> ui_manager;
-public:
-    explicit QtAppSink(QList<QLoggerSpace*> ui_manager);
-    void register_ui();
 protected:
     void sink_it_(const spdlog::details::log_msg& log_message) override;
     void flush_() override {}

@@ -7,7 +7,7 @@
 
 
 
-QLoggerSpace::QLoggerSpace() {
+QLoggerSpace::QLoggerSpace(std::shared_ptr<QtAppSink> qt_sink) : sink_qt(qt_sink) {
     setPlainText("Отслеживание логов\n");
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setAlignment(Qt::AlignBottom);
@@ -23,13 +23,10 @@ QLoggerSpace::QLoggerSpace() {
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &QLoggerSpace::show_logs);
     timer->start(1000);
-}
-
-void QLoggerSpace::register_sink(std::shared_ptr<QtAppSink> qt_sink) {
-    this->sink_qt = qt_sink;
 
     QObject::connect(this->sink_qt.get(), &QtAppSink::generate_signal, this, &QLoggerSpace::fill_buffer);
 }
+
 
 void QLoggerSpace::show_logs() {
     if (!log_buffer.isEmpty()) {

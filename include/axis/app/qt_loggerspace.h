@@ -26,9 +26,8 @@ private:
     int cut_strings = 0;
 
 public:
-    QLoggerSpace();
+    QLoggerSpace(std::shared_ptr<QtAppSink> qt_sink);
 
-    void register_sink(std::shared_ptr<QtAppSink> sink);
     void show_logs();
 
 private slots:

@@ -12,16 +12,16 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
+    std::shared_ptr<QtAppSink> sink_qt(new QtAppSink(), [](QtAppSink* sink_ptr) {
+        sink_ptr->deleteLater();
+    });
 
-    QLoggerSpace* log_space = new QLoggerSpace();
+    QLoggerSpace* log_space = new QLoggerSpace(sink_qt);
 
     QList<QLoggerSpace*> logs_manager;
     logs_manager.push_back(log_space);
 
     auto logger = std::make_shared<LocalLogger>();
-
-    std::shared_ptr<QtAppSink> sink_qt = std::make_shared<QtAppSink>(logs_manager);
-    sink_qt->register_ui();
 
     logger->registerSink(sink_qt);
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
     /**/
     QObject::connect(test, &QPushButton::clicked, [logger]() {
-        logger->warn("Warning Meow");
+        logger->error("Panic meow");
     });
 
 
